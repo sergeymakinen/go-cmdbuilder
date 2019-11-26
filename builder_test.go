@@ -198,12 +198,6 @@ func TestBuilder(t *testing.T) {
 	for _, bt := range bldTests {
 		t.Run("Name="+bt.Name, func(t *testing.T) {
 			builder := NewBuilder(bt.Args)
-
-			// For now, *nix default option style will be used for tests
-			builder.ShortOptionDelimiter = "-"
-			builder.LongOptionDelimiter = "--"
-			builder.NameValueDelimiter = "="
-
 			builder.DisableShortOption = bt.Opts.DisableShortOption
 			builder.DisableCombiningShortOptions = bt.Opts.DisableCombiningShortOptions
 			builder.ShortOptionDelimiter = bt.Opts.ShortOptionDelimiter
