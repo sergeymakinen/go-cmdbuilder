@@ -4,9 +4,9 @@
 //
 // For now, it supports the following options:
 //
-//	native Go FlagSet
-//	https://github.com/spf13/pflag FlagSet
-//	https://github.com/jessevdk/go-flags like struct tag mapped struct
+//	- native Go FlagSet
+//	- https://github.com/spf13/pflag FlagSet
+//	- https://github.com/jessevdk/go-flags like struct tag mapped struct
 package cmdbuilder
 
 import (

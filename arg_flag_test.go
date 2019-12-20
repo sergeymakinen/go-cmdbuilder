@@ -48,14 +48,14 @@ func TestArgsFromFlagSetWithOptions(t *testing.T) {
 				t.Skipf("optTest.OptionalDefault = %v; want nil", ot.OptionalDefault)
 			}
 			if err := set.Parse(ot.Args); err != nil {
-				t.Fatalf("FlagSet.Parse(optTest.Args) = %v", err)
+				t.Fatalf("FlagSet.Parse(optTest.Args) = %v; want nil", err)
 			}
 			args, err := ArgsFromFlagSet(set)
 			if err != nil {
-				t.Fatalf("ArgsFromFlagSet(set) = %v", err)
+				t.Fatalf("ArgsFromFlagSet(set) = %v; want nil", err)
 			}
 			if len(args) != 1 {
-				t.Fatalf("len(args) = %d", len(args))
+				t.Fatalf("len(args) = %d; want 1", len(args))
 			}
 			ot.ExpectedArg.TestEqual(t, args[0])
 		})
@@ -74,7 +74,7 @@ func TestArgsFromFlagSetWithPositional(t *testing.T) {
 			}
 			args, err := ArgsFromFlagSet(set)
 			if err != nil {
-				t.Fatalf("ArgsFromFlagSet(set) = %v", err)
+				t.Fatalf("ArgsFromFlagSet(set) = %v; want nil", err)
 			}
 			if len(args) != len(pt.ExpectedArgs) {
 				t.Fatalf("len(args) = %d; want %d", len(args), len(pt.ExpectedArgs))
