@@ -60,17 +60,17 @@ func TestArgsFromFlagsStructWithOptions(t *testing.T) {
 			}
 			if _, err := flags.ParseArgs(s, ft.Args); err != nil {
 				if allowedErrors.MatchString(err.Error()) {
-					t.Skipf("ParseArgs(optTest.Args) = %v", err)
+					t.Skipf("ParseArgs(optTest.Args) = %v; want nil", err)
 				} else {
-					t.Fatalf("ParseArgs(optTest.Args) = %v", err)
+					t.Fatalf("ParseArgs(optTest.Args) = %v; want nil", err)
 				}
 			}
 			args, err := ArgsFromFlagsStruct(s)
 			if err != nil {
-				t.Fatalf("ArgsFromFlagsStruct(set) = %v", err)
+				t.Fatalf("ArgsFromFlagsStruct(set) = %v; want nil", err)
 			}
 			if len(args) != 1 {
-				t.Fatalf("len(args) = %d", len(args))
+				t.Fatalf("len(args) = %d; want 1", len(args))
 			}
 			ft.ExpectedArg.TestEqual(t, args[0])
 		})
@@ -79,16 +79,85 @@ func TestArgsFromFlagsStructWithOptions(t *testing.T) {
 
 func TestArgsFromFlagsStructShouldFailOnNonStructs(t *testing.T) {
 	if _, err := ArgsFromFlagsStruct(nil); err == nil {
-		t.Error("ArgsFromFlagsStruct(nil) = nil; want non-nil")
+		t.Error("ArgsFromFlagsStruct(nil) = _, nil; want non-nil")
 	}
 	if _, err := ArgsFromFlagsStruct(true); err == nil {
-		t.Error("ArgsFromFlagsStruct(true) = nil; want non-nil")
+		t.Error("ArgsFromFlagsStruct(true) = _, nil; want non-nil")
 	}
 	badStruct := struct {
 		Bad string `malformed`
 	}{}
 	if _, err := ArgsFromFlagsStruct(badStruct); err == nil {
-		t.Error("ArgsFromFlagsStruct(badStruct) = nil; want non-nil")
+		t.Error("ArgsFromFlagsStruct(badStruct) = _, nil; want non-nil")
+	}
+}
+
+func TestArgsFromFlagsStructWithPtrs(t *testing.T) {
+	expectedArgs := []argTest{
+		{
+			IsOption:        true,
+			IsProvided:      true,
+			IsValueOptional: true,
+			IsValueProvided: false,
+			ShortName:       "i",
+			Value:           []string{"true"},
+		},
+		{
+			IsOption:        true,
+			IsProvided:      true,
+			IsValueOptional: true,
+			IsValueProvided: true,
+			ShortName:       "f",
+			Value:           []string{"false"},
+		},
+		{
+			IsOption:        true,
+			IsProvided:      false,
+			IsValueOptional: true,
+			IsValueProvided: false,
+			ShortName:       "u",
+			Value:           nil,
+		},
+	}
+	bt1 := true
+	bt2 := &bt1
+	bt3 := &bt2
+	st1 := []**bool{bt3}
+	st2 := &st1
+
+	bf1 := false
+	bf2 := &bf1
+	bf3 := &bf2
+	sf1 := []**bool{bf3}
+	sf2 := &sf1
+
+	type embeddedStruct struct {
+		Uninited    **[]**bool `short:"u"`
+	}
+	type ignoredStruct struct {
+		ignored    **[]**bool `short:"u"`
+	}
+	ptrStruct := struct {
+		InitedTrue  **[]**bool `short:"i"`
+		InitedFalse **[]**bool `short:"f",default:"true"`
+		embeddedStruct
+
+		ignoredStruct
+		ignored1 embeddedStruct
+		ignored2 ignoredStruct
+	}{
+		InitedTrue:  &st2,
+		InitedFalse: &sf2,
+	}
+	args, err := ArgsFromFlagsStruct(ptrStruct)
+	if err != nil {
+		t.Errorf("ArgsFromFlagsStruct(ptrStruct) = %v; want nil", err)
+	}
+	if len(args) != len(expectedArgs) {
+		t.Fatalf("len(args) = %d; want %d", len(args), len(expectedArgs))
+	}
+	for i, arg := range expectedArgs {
+		arg.TestEqual(t, args[i])
 	}
 }
 
@@ -101,11 +170,11 @@ func TestArgsFromFlagsStructWithPositional(t *testing.T) {
 				} `positional-args:"yes"`
 			}{}
 			if _, err := flags.ParseArgs(&s, pt.Args); err != nil {
-				t.Fatalf("ParseArgs(posTest.Args) = %v", err)
+				t.Fatalf("ParseArgs(posTest.Args) = %v; want nil", err)
 			}
 			args, err := ArgsFromFlagsStruct(s)
 			if err != nil {
-				t.Fatalf("ArgsFromFlagsStruct(set) = %v", err)
+				t.Fatalf("ArgsFromFlagsStruct(set) = %v; want nil", err)
 			}
 			if len(args) < len(pt.ExpectedArgs) {
 				t.Fatalf("len(args) = %d; want %d or more", len(args), len(pt.ExpectedArgs))

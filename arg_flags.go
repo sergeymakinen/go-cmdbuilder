@@ -9,27 +9,37 @@ import (
 	"github.com/pkg/errors"
 )
 
-var durationType = reflect.TypeOf((*time.Duration)(nil)).Elem()
+type marshaler interface {
+	MarshalFlag() (string, error)
+}
+
+var (
+	durationType  = reflect.TypeOf((*time.Duration)(nil)).Elem()
+	marshalerType = reflect.TypeOf((*marshaler)(nil)).Elem()
+)
 
 // flagsArg represents https://github.com/jessevdk/go-flags flag
 type flagsArg struct {
 	isOption bool
 	name     string
 	tags     structTags
+	typ      reflect.Type
 	value    reflect.Value
 }
 
 // ArgsFromFlagsStruct converts https://github.com/jessevdk/go-flags flags from provided struct to Arg slice
-func ArgsFromFlagsStruct(in interface{}) (args []Arg, err error) {
-	v, err := indirect(reflect.ValueOf(in))
-	if err != nil {
+func ArgsFromFlagsStruct(v interface{}) (args []Arg, err error) {
+	val := reflect.ValueOf(v)
+	if !val.IsValid() {
+		err = errors.New("expected value, got nil")
 		return
 	}
-	if v.Kind() != reflect.Struct {
-		err = errors.Errorf("expected struct, got %s", v.Kind())
+	val = reflect.Indirect(val)
+	if val.Kind() != reflect.Struct {
+		err = errors.Errorf("expected struct, got %s", val.Kind())
 		return
 	}
-	err = extractFlagsStructArgs(v, &args)
+	err = extractFlagsStructArgs(val, &args)
 	return
 }
 
@@ -38,7 +48,7 @@ func (a flagsArg) IsOption() bool { return a.isOption }
 func (a flagsArg) IsProvided() bool {
 	def := a.tags.All("default")
 	if def == nil {
-		def = a.valueToSlice(reflect.Zero(a.value.Type()))
+		def = a.valueToSlice(reflect.Zero(a.typ))
 	}
 	return !reflect.DeepEqual(a.Value(), def)
 }
@@ -74,24 +84,41 @@ func (a flagsArg) ShortName() string {
 func (a flagsArg) Value() []string { return a.valueToSlice(a.value) }
 
 func (a flagsArg) isBoolValue() bool {
-	v := a.value
+	t := a.indirectType(a.typ)
 	for {
-		if !v.IsValid() {
-			return false
-		}
-		t := v.Type()
 		switch t.Kind() {
-		case reflect.Interface:
+		case reflect.Array, reflect.Slice:
+			return a.indirectType(t.Elem()).Kind() == reflect.Bool
+		default:
+			return t.Kind() == reflect.Bool
+		}
+	}
+}
+
+func (a flagsArg) indirect(v reflect.Value) reflect.Value {
+	if !v.IsValid() {
+		return reflect.Value{}
+	}
+	for {
+		switch v.Type().Kind() {
+		case reflect.Interface, reflect.Ptr:
 			if v.IsNil() {
-				return false
+				return reflect.Value{}
 			}
 			v = v.Elem()
-		case reflect.Ptr:
-			v = reflect.Indirect(v)
-		case reflect.Array, reflect.Slice:
-			return v.Type().Elem().Kind() == reflect.Bool
 		default:
-			return v.Kind() == reflect.Bool
+			return v
+		}
+	}
+}
+
+func (a flagsArg) indirectType(t reflect.Type) reflect.Type {
+	for {
+		switch t.Kind() {
+		case reflect.Ptr:
+			t = t.Elem()
+		default:
+			return t
 		}
 	}
 }
@@ -106,6 +133,10 @@ func (a flagsArg) isTrueValue() bool {
 }
 
 func (a flagsArg) valueToSlice(v reflect.Value) []string {
+	v = a.indirect(v)
+	if !v.IsValid() {
+		return nil
+	}
 	var list []string
 	switch v.Type().Kind() {
 	case reflect.Array, reflect.Slice:
@@ -125,22 +156,17 @@ func (a flagsArg) valueToSlice(v reflect.Value) []string {
 }
 
 func (a flagsArg) valueToString(v reflect.Value) string {
-	v, err := indirect(v)
-	if err != nil {
+	v = a.indirect(v)
+	if !v.IsValid() {
 		return ""
 	}
 	typ := v.Type()
-	if v.CanInterface() {
-		in, ok := v.Interface().(interface {
-			MarshalFlag() (string, error)
-		})
-		if ok {
-			s, err := in.MarshalFlag()
-			if err != nil {
-				panic(errors.Wrapf(err, "failed to marshal value %q", v))
-			}
-			return s
+	if typ == marshalerType {
+		s, err := v.Interface().(marshaler).MarshalFlag()
+		if err != nil {
+			panic(errors.Wrapf(err, "failed to marshal value %q", v))
 		}
+		return s
 	}
 	if typ == durationType {
 		return v.Interface().(fmt.Stringer).String()
@@ -163,26 +189,6 @@ func (a flagsArg) valueToString(v reflect.Value) string {
 	return ""
 }
 
-func indirect(v reflect.Value) (reflect.Value, error) {
-	for {
-		if !v.IsValid() {
-			return v, errors.New("expected value, got nil")
-		}
-		typ := v.Type()
-		switch typ.Kind() {
-		case reflect.Interface:
-			if v.IsNil() {
-				return v, errors.New("expected value, got nil")
-			}
-			v = v.Elem()
-		case reflect.Ptr:
-			v = reflect.Indirect(v)
-		default:
-			return v, nil
-		}
-	}
-}
-
 func extractFlagsStructArgs(v reflect.Value, args *[]Arg) error {
 	t := v.Type()
 	for i := 0; i < t.NumField(); i++ {
@@ -197,10 +203,11 @@ func extractFlagsStructArgs(v reflect.Value, args *[]Arg) error {
 		if tags.First("no-flag") != "" {
 			continue
 		}
-		fv, err := indirect(v.Field(i))
-		if err != nil {
+		fv := v.Field(i)
+		if !fv.IsValid() {
 			continue
 		}
+		fv = reflect.Indirect(fv)
 		if fv.Kind() == reflect.Struct {
 			if tags.IsTrue("positional-args") {
 				for j := 0; j < fv.NumField(); j++ {
@@ -212,6 +219,7 @@ func extractFlagsStructArgs(v reflect.Value, args *[]Arg) error {
 					*args = append(*args, &flagsArg{
 						isOption: false,
 						name:     stringOrDefault(fTags.First("positional-arg-name"), fsf.Name),
+						typ:      sf.Type,
 						value:    fv.Field(j),
 					})
 				}
@@ -228,6 +236,7 @@ func extractFlagsStructArgs(v reflect.Value, args *[]Arg) error {
 		*args = append(*args, &flagsArg{
 			isOption: true,
 			tags:     tags,
+			typ:      sf.Type,
 			value:    fv,
 		})
 	}
