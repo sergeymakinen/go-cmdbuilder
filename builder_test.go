@@ -204,7 +204,7 @@ func TestBuilder(t *testing.T) {
 			builder.QuoteValue = bt.Opts.QuoteValue
 			args, err := builder.Build(bt.Args)
 			if err != nil {
-				t.Fatalf("Builder.Build() = %v", err)
+				t.Fatalf("Builder.Build() = _, %v", err)
 			}
 			if !reflect.DeepEqual(args, bt.ExpectedArgs) {
 				t.Errorf("args = %v; want %v", args, bt.ExpectedArgs)

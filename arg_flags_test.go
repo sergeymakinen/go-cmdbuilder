@@ -1,6 +1,7 @@
 package cmdbuilder
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -60,14 +61,14 @@ func TestArgsFromFlagsStructWithOptions(t *testing.T) {
 			}
 			if _, err := flags.ParseArgs(s, ft.Args); err != nil {
 				if allowedErrors.MatchString(err.Error()) {
-					t.Skipf("ParseArgs(optTest.Args) = %v; want nil", err)
+					t.Skipf("ParseArgs() = _, %v; want nil", err)
 				} else {
-					t.Fatalf("ParseArgs(optTest.Args) = %v; want nil", err)
+					t.Fatalf("ParseArgs() = _, %v; want nil", err)
 				}
 			}
 			args, err := ArgsFromFlagsStruct(s)
 			if err != nil {
-				t.Fatalf("ArgsFromFlagsStruct(set) = %v; want nil", err)
+				t.Fatalf("ArgsFromFlagsStruct() = _, %v; want nil", err)
 			}
 			if len(args) != 1 {
 				t.Fatalf("len(args) = %d; want 1", len(args))
@@ -132,10 +133,10 @@ func TestArgsFromFlagsStructWithPtrs(t *testing.T) {
 	sf2 := &sf1
 
 	type embeddedStruct struct {
-		Uninited    **[]**bool `short:"u"`
+		Uninited **[]**bool `short:"u"`
 	}
 	type ignoredStruct struct {
-		ignored    **[]**bool `short:"u"`
+		ignored **[]**bool `short:"u"`
 	}
 	ptrStruct := struct {
 		InitedTrue  **[]**bool `short:"i"`
@@ -151,7 +152,7 @@ func TestArgsFromFlagsStructWithPtrs(t *testing.T) {
 	}
 	args, err := ArgsFromFlagsStruct(ptrStruct)
 	if err != nil {
-		t.Errorf("ArgsFromFlagsStruct(ptrStruct) = %v; want nil", err)
+		t.Errorf("ArgsFromFlagsStruct() = _, %v; want nil", err)
 	}
 	if len(args) != len(expectedArgs) {
 		t.Fatalf("len(args) = %d; want %d", len(args), len(expectedArgs))
@@ -159,6 +160,64 @@ func TestArgsFromFlagsStructWithPtrs(t *testing.T) {
 	for i, arg := range expectedArgs {
 		arg.TestEqual(t, args[i])
 	}
+}
+
+type marshalTest string
+
+func (m marshalTest) MarshalFlag() (string, error) {
+	if m == "fail" {
+		return string("fail: " + m), errors.New("error")
+	}
+	return string("success: " + m), nil
+}
+
+func TestArgsFromFlagsStructWithMarshaler(t *testing.T) {
+	expectedArgs := []argTest{
+		{
+			IsOption:        true,
+			IsProvided:      true,
+			IsValueOptional: false,
+			IsValueProvided: true,
+			Name:            "value",
+			Value:           []string{"success: ok"},
+		},
+	}
+	s := struct {
+		Value marshalTest `long:"value"`
+	}{
+		Value: "ok",
+	}
+	args, err := ArgsFromFlagsStruct(s)
+	if err != nil {
+		t.Errorf("ArgsFromFlagsStruct() = _, %v; want nil", err)
+	}
+	if len(args) != len(expectedArgs) {
+		t.Fatalf("len(args) = %d; want %d", len(args), len(expectedArgs))
+	}
+	for i, arg := range expectedArgs {
+		arg.TestEqual(t, args[i])
+	}
+}
+
+func TestArgsFromFlagsStructShouldFailOnMarshalerError(t *testing.T) {
+	s := struct {
+		Value marshalTest `long:"value"`
+	}{
+		Value: "fail",
+	}
+	args, err := ArgsFromFlagsStruct(s)
+	if err != nil {
+		t.Errorf("ArgsFromFlagsStruct() = _, %v; want nil", err)
+	}
+	if len(args) != 1 {
+		t.Fatalf("len(args) = %d; want 1", len(args))
+	}
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("recover() = nil; want non-nil")
+		}
+	}()
+	args[0].Value()
 }
 
 func TestArgsFromFlagsStructWithPositional(t *testing.T) {
@@ -170,11 +229,11 @@ func TestArgsFromFlagsStructWithPositional(t *testing.T) {
 				} `positional-args:"yes"`
 			}{}
 			if _, err := flags.ParseArgs(&s, pt.Args); err != nil {
-				t.Fatalf("ParseArgs(posTest.Args) = %v; want nil", err)
+				t.Fatalf("flags.ParseArgs() = _, %v; want nil", err)
 			}
 			args, err := ArgsFromFlagsStruct(s)
 			if err != nil {
-				t.Fatalf("ArgsFromFlagsStruct(set) = %v; want nil", err)
+				t.Fatalf("ArgsFromFlagsStruct() = _, %v; want nil", err)
 			}
 			if len(args) < len(pt.ExpectedArgs) {
 				t.Fatalf("len(args) = %d; want %d or more", len(args), len(pt.ExpectedArgs))

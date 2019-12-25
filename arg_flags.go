@@ -161,7 +161,7 @@ func (a flagsArg) valueToString(v reflect.Value) string {
 		return ""
 	}
 	typ := v.Type()
-	if typ == marshalerType {
+	if v.CanInterface() && typ.Implements(marshalerType) {
 		s, err := v.Interface().(marshaler).MarshalFlag()
 		if err != nil {
 			panic(errors.Wrapf(err, "failed to marshal value %q", v))

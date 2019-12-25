@@ -90,11 +90,11 @@ func TestArgsFromPFlagSetWithOptions(t *testing.T) {
 				set.Lookup(ft.Name).NoOptDefVal = strings.Join(ft.OptionalDefault, ",")
 			}
 			if err := set.Parse(ft.Args); err != nil {
-				t.Fatalf("FlagSet.Parse(optTest.Args) = %v; want nil", err)
+				t.Fatalf("FlagSet.Parse() = %v; want nil", err)
 			}
 			args, err := ArgsFromPFlagSet(set)
 			if err != nil {
-				t.Fatalf("ArgsFromPFlagSet(set) = %v; want nil", err)
+				t.Fatalf("ArgsFromPFlagSet() = _, %v; want nil", err)
 			}
 			if len(args) != 1 {
 				t.Fatalf("len(args) = %d; want 1", len(args))
@@ -109,11 +109,11 @@ func TestArgsFromPFlagSetWithPositional(t *testing.T) {
 		t.Run("Name="+pt.Name, func(t *testing.T) {
 			set := pflag.NewFlagSet("test", pflag.ContinueOnError)
 			if err := set.Parse(pt.Args); err != nil {
-				t.Fatalf("FlagSet.Parse(posTest.Args) = %v; want nil", err)
+				t.Fatalf("FlagSet.Parse() = %v; want nil", err)
 			}
 			args, err := ArgsFromPFlagSet(set)
 			if err != nil {
-				t.Fatalf("ArgsFromPFlagSet(set) = %v; want nil", err)
+				t.Fatalf("ArgsFromPFlagSet() = _, %v; want nil", err)
 			}
 			if len(args) != len(pt.ExpectedArgs) {
 				t.Fatalf("len(args) = %d; want %d", len(args), len(pt.ExpectedArgs))
