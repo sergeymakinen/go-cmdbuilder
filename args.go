@@ -37,21 +37,26 @@ The terms "argument" and "option" are used here as specified by Program Argument
 of The GNU C Library Reference Manual (see https://www.gnu.org/software/libc/manual/html_node/Argument-Syntax.html):
 
  - Arguments are options if they begin with a hyphen delimiter ('-').
- - Multiple options may follow a hyphen delimiter in a single token if the options do not take arguments.
-   Thus, '-abc' is equivalent to '-a -b -c'.
+ - Multiple options may follow a hyphen delimiter in a single token
+   if the options do not take arguments. Thus, '-abc' is equivalent
+   to '-a -b -c'.
  - Option names are single alphanumeric characters.
  - Certain options require an argument.
- - An option and its argument may or may not appear as separate tokens. (In other words, the whitespace
-   separating them is optional.) Thus, '-o foo' and '-ofoo' are equivalent.
+ - An option and its argument may or may not appear as separate tokens.
+   (In other words, the whitespace separating them is optional.)
+   Thus, '-o foo' and '-ofoo' are equivalent.
  - Options typically precede other non-option arguments.
- - The argument '--' terminates all options; any following arguments are treated as non-option arguments,
-   even if they begin with a hyphen.
- - A token consisting of a single hyphen character is interpreted as an ordinary non-option argument.
-   By convention, it is used to specify input from or output to the standard input and output streams.
+ - The argument '--' terminates all options; any following arguments
+   are treated as non-option arguments, even if they begin with a hyphen.
+ - A token consisting of a single hyphen character is interpreted as
+   an ordinary non-option argument. By convention, it is used to specify
+   input from or output to the standard input and output streams.
  - Options may be supplied in any order, or appear multiple times.
- - Long options consist of '--' followed by a name made of alphanumeric characters and dashes.
- - To specify an argument for a long option, write '--name=value'. This syntax enables a long option
-   to accept an argument that is itself optional.
+ - Long options consist of '--' followed by a name made of alphanumeric
+   characters and dashes.
+ - To specify an argument for a long option, write '--name=value'.
+   This syntax enables a long option to accept an argument that is
+   itself optional.
 
 Supported field tags
 
@@ -73,11 +78,11 @@ Optional:
     optional-value:      the value of the option when the argument has a zero value
                          This tag can be specified multiple times in case of maps or slices
 
-    default:             the default value of the argument. This tag can be specified multiple times
-                         in case of slices or maps
+    default:             the default value of the argument. This tag can be specified
+                         multiple times in case of slices or maps
 
-    positional-args:     when specified on a field with a struct type, uses the fields of that struct
-                         (in order of the fields) as positional arguments
+    positional-args:     when specified on a field with a struct type, uses the fields of
+                         that struct (in order of the fields) as positional arguments
 */
 package cmdbuilder
 
