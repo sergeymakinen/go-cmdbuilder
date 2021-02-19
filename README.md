@@ -1,43 +1,81 @@
 # cmdbuilder
 
-[![Travis-CI](https://travis-ci.com/sergeymakinen/go-cmdbuilder.svg)](https://travis-ci.com/sergeymakinen/go-cmdbuilder) [![AppVeyor](https://ci.appveyor.com/api/projects/status/p2gum60gw4t6alji/branch/master?svg=true)](https://ci.appveyor.com/project/sergeymakinen/go-cmdbuilder/branch/master) [![GoDoc](https://godoc.org/github.com/sergeymakinen/go-cmdbuilder?status.svg)](http://godoc.org/github.com/sergeymakinen/go-cmdbuilder) [![Report card](https://goreportcard.com/badge/github.com/sergeymakinen/go-cmdbuilder)](https://goreportcard.com/report/github.com/sergeymakinen/go-cmdbuilder)
+[![tests](https://github.com/sergeymakinen/go-cmdbuilder/workflows/tests/badge.svg)](https://github.com/sergeymakinen/go-cmdbuilder/actions?query=workflow%3Atests)
+[![Go Reference](https://pkg.go.dev/badge/github.com/sergeymakinen/go-cmdbuilder.svg)](https://pkg.go.dev/github.com/sergeymakinen/go-cmdbuilder/v2)
+[![Go Report Card](https://goreportcard.com/badge/github.com/sergeymakinen/go-cmdbuilder)](https://goreportcard.com/report/github.com/sergeymakinen/go-cmdbuilder)
+[![codecov](https://codecov.io/gh/sergeymakinen/go-cmdbuilder/branch/main/graph/badge.svg)](https://codecov.io/gh/sergeymakinen/go-cmdbuilder)
 
-Package cmdbuilder provides an options-to-command-line arguments converter.
+Package cmdbuilder implements a converter from structs defining command-line arguments and their values back to a command-line.
 
-It's used to convert different flag sets and struct tag based flag options back to a command-line.
+The cmdbuilder package aims to be compatible with the flags package (see https://github.com/jessevdk/go-flags),
+so it also uses structs, the reflection and struct field tags to specify command-line arguments. For example:
 
-For now, it supports the following options:
-- native Go FlagSet
-- https://github.com/spf13/pflag FlagSet
-- https://github.com/jessevdk/go-flags like struct tag mapped struct
+```go
+type Options struct {
+    Verbose    []bool            `short:"v" long:"verbose"`
+    AuthorInfo map[string]string `short:"a"`
+    Name       string            `long:"name" optional:"true"`
+}
+```
+
+This specifies the `Verbose` boolean option with a short name `-v` and a long name `--verbose`,
+the `AuthorInfo` map option with a short name `-a`,
+and the `Name` string option with a long name `--name` and an optional value.
+If the struct is initialized as the following:
+
+```go
+opts := Options{
+    Verbose:    []bool{true, true, true},
+    AuthorInfo: map[string]string{"name": "Jesse", "surname": "van den Kieboom"},
+    Name:       "Sergey Makinen",
+}
+```
+
+Then the `CommandLine` function will produce the following string:
+
+```
+-vvv -a name:Jesse -a "surname:van den Kieboom" --name="Sergey Makinen"
+```
+
+Any type that implements the `Marshaler` interface may fully customize its value output.
 
 ## Installation
 
 Use go get:
 
 ```bash
-go get github.com/sergeymakinen/go-cmdbuilder
+go get github.com/sergeymakinen/go-cmdbuilder/v2
 ```
 
 Then import the package into your own code:
 
 ```go
-import "github.com/sergeymakinen/go-cmdbuilder"
+import "github.com/sergeymakinen/go-cmdbuilder/v2"
 ```
 
 
 ## Example
 
 ```go
-s := struct {
-    Agree bool `long:"agree"`
-    Age   uint `long:"age" short:"a"`
-}{}
-flags.ParseArgs(&s, []string{"--agree", "-a", "18"})
-args, _ := ArgsFromFlagsStruct(s)
-list, _ := Build(args)
-fmt.Println(strings.Join(list, " "))
-// Output: --agree -a 18
+import "fmt"
+
+type Options struct {
+    Verbose    []bool            `short:"v" long:"verbose"`
+    AuthorInfo map[string]string `short:"a"`
+    Name       string            `long:"name" optional:"true"`
+}
+
+func main() {
+	opts := Options{
+		Verbose:    []bool{true, true, true},
+		AuthorInfo: map[string]string{"name": "Jesse", "surname": "van den Kieboom"},
+		Name:       "Sergey Makinen",
+	}
+
+	cmd, _ := CommandLine(opts)
+	fmt.Println(cmd)
+	// Output: -vvv -a name:Jesse -a "surname:van den Kieboom" --name="Sergey Makinen"
+}
 ```
 
 ## License
