@@ -75,14 +75,14 @@ Optional:
     optional:            if non-empty, makes the value of the option optional.
                          When the value is optional, it will produce '--argument=value'
 
-    optional-value:      the value of the option when the argument has a zero value
+    optional-value:      the value of the option when the argument has a zero value.
                          This tag can be specified multiple times in case of maps or slices
 
     default:             the default value of the argument. This tag can be specified
                          multiple times in case of slices or maps
 
-    positional-args:     when specified on a field with a struct type, uses the fields of
-                         that struct (in order of the fields) as positional arguments
+    positional-args:     when specified on a field with a struct type, uses the fields
+                         of that struct (in order of the fields) as positional arguments
 */
 package cmdbuilder
 
@@ -132,19 +132,22 @@ type Config struct {
 	// OptionArgumentDelimiter defines the delimiter is written
 	// between an option and its argument.
 	//
-	// Thus, the option 'o' with the argument 'foo' will become '-o foo', if the delimiter is space.
+	// Thus, the option 'o' with the argument 'foo' will become
+	// '-o foo', if the delimiter is space.
 	OptionArgumentDelimiter string
 
 	// OptionOptionalArgumentDelimiter defines the delimiter is written
 	// between an option and its optional argument.
 	//
-	// Thus, the option 'opt' with the argument 'foo' will become '--opt=foo', if the delimiter is '='.
+	// Thus, the option 'opt' with the argument 'foo' will become
+	// '--opt=foo', if the delimiter is '='.
 	OptionOptionalArgumentDelimiter string
 
 	// OptionsTerminator defines the terminator is written
 	// between options and positional arguments.
 	//
-	// Thus, '--a bc de -f' will become '-f --a -- bc de', if the terminator is '--'.
+	// Thus, '--a bc de -f' will become '-f --a -- bc de',
+	// if the terminator is '--'.
 	OptionsTerminator string
 
 	// ArgumentQuoter, if not nil, is applied to option and positional arguments.
